@@ -35,7 +35,7 @@ voice_data = load_data()
 
 @bot.event
 async def on_ready():
-    print(f"Bot起動: {bot.user}")
+    print(f"✅ Bot起動: {bot.user}")
     try:
         synced = await bot.tree.sync()
         print(f"スラッシュコマンド同期: {len(synced)}個")
@@ -72,9 +72,9 @@ async def check(ctx, member: discord.Member):
 
 # 起動
 if __name__ == "__main__":
-    TOKEN = os.getenv("DISCORD_TOKEN")
+    TOKEN = os.getenv("TOKEN")   # ← ここを TOKEN に変更
     if not TOKEN:
-        print("❌ DISCORD_TOKEN が設定されていません！")
+        print("❌ TOKEN が設定されていません！")
         exit(1)
     print("Botを起動します...")
     bot.run(TOKEN)
