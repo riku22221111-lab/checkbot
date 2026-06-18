@@ -5,6 +5,13 @@ import json
 import os
 from datetime import datetime
 
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
+
+client = discord.Client(intents=intents)
+tree = app_commands.CommandTree(client)
+
 # 設定
 PREFIX = "!"
 DATA_FILE = "voice_data.json"
@@ -72,7 +79,7 @@ async def check(ctx, member: discord.Member):
 
 # 起動
 if __name__ == "__main__":
-    TOKEN = os.getenv("TOKEN")   # ← ここを TOKEN に変更
+    client.run(os.getenv("TOKEN"))   # ← ここを TOKEN に変更
     if not TOKEN:
         print("❌ TOKEN が設定されていません！")
         exit(1)
