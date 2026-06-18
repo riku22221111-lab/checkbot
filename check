@@ -17,13 +17,19 @@ bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 
 def load_data():
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return {}
     return {}
 
 def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"データ保存エラー: {e}")
 
 voice_data = load_data()
 
@@ -34,7 +40,7 @@ async def on_ready():
         synced = await bot.tree.sync()
         print(f"スラッシュコマンド同期: {len(synced)}個")
     except Exception as e:
-        print(e)
+        print(f"同期エラー: {e}")
 
 @bot.event
 async def on_voice_state_update(member, before, after):
@@ -46,7 +52,7 @@ async def on_voice_state_update(member, before, after):
     if guild_id not in voice_data:
         voice_data[guild_id] = {}
 
-    if after.channel is not None and (before.channel is None or before.channel != after.channel):
+    if after.channel is not None and (before.channel is None or before.channel.id != after.channel.id):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         voice_data[guild_id][user_id] = now
         save_data(voice_data)
@@ -66,8 +72,9 @@ async def check(ctx, member: discord.Member):
 
 # 起動
 if __name__ == "__main__":
-    TOKEN = os.getenv("DISCORD_TOKEN")  # ← 環境変数から取得
+    TOKEN = os.getenv("DISCORD_TOKEN")
     if not TOKEN:
-        print("DISCORD_TOKEN が設定されていません！")
+        print("❌ DISCORD_TOKEN が設定されていません！")
         exit(1)
+    print("Botを起動します...")
     bot.run(TOKEN)
