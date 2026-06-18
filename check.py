@@ -5,13 +5,6 @@ import json
 import os
 from datetime import datetime
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-
-client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
-
 # 設定
 PREFIX = "!"
 DATA_FILE = "voice_data.json"
@@ -43,11 +36,15 @@ voice_data = load_data()
 @bot.event
 async def on_ready():
     print(f"✅ Bot起動: {bot.user}")
+    
+    # コマンドを確実に同期
     try:
         synced = await bot.tree.sync()
-        print(f"スラッシュコマンド同期: {len(synced)}個")
+        print(f"✅ スラッシュコマンド同期完了: {len(synced)}個")
+        for cmd in synced:
+            print(f"  - /{cmd.name}")
     except Exception as e:
-        print(f"同期エラー: {e}")
+        print(f"❌ 同期エラー: {e}")
 
 @bot.event
 async def on_voice_state_update(member, before, after):
@@ -79,9 +76,9 @@ async def check(ctx, member: discord.Member):
 
 # 起動
 if __name__ == "__main__":
-    client.run(os.getenv("TOKEN"))   # ← ここを TOKEN に変更
+    TOKEN = os.getenv("TOKEN")
     if not TOKEN:
         print("❌ TOKEN が設定されていません！")
         exit(1)
-    print("Botを起動します...")
+    print("🚀 Botを起動します...")
     bot.run(TOKEN)
