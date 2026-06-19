@@ -62,44 +62,6 @@ async def on_ready():
     except Exception as e:
         print(f"❌ 同期エラー: {e}")
 
-
-# ===== メッセージ監視（招待リンク自動削除） =====
-@bot.event
-async def on_message(message: discord.Message):
-    # Bot自身のメッセージは無視
-    if message.author.bot:
-        return
-    # DMは対象外（ギルドメッセージのみ処理）
-    if message.guild is None:
-        return
-
-    if INVITE_PATTERN.search(message.content):
-        # 管理者を含め、誰が貼っても削除する
-        try:
-            await message.delete()
-        except discord.Forbidden:
-            print(f"❌ メッセージ削除権限がありません（{message.guild.name}）")
-            return
-        except discord.NotFound:
-            pass  # 既に削除済みなら無視
-
-        try:
-            warning = await message.channel.send(
-                f"⚠️ {message.author.mention} なに招待リンク貼ってんの？れいんさんからちゃんと許可得たか??"
-            )
-            await asyncio.sleep(35)
-            await warning.delete()
-        except discord.Forbidden:
-            print(f"❌ 警告メッセージの送信権限がありません（{message.guild.name}）")
-        except discord.NotFound:
-            pass
-
-        return  # 招待リンクメッセージはコマンド処理に回さない
-
-    # 通常のコマンド処理を継続させる（hybrid_command等のため必須）
-    await bot.process_commands(message)
-
-
 # ===== VC参加時刻の記録 =====
 @bot.event
 async def on_voice_state_update(member, before, after):
