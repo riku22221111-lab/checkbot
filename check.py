@@ -6,13 +6,16 @@ import os
 import re
 import asyncio
 from datetime import datetime
-# 設定
+
+# ===== 設定 =====
 PREFIX = "!"
 DATA_FILE = "voice_data.json"
+
 intents = discord.Intents.default()
 intents.voice_states = True
 intents.members = True
-intents.message_content = True  # 招待リンク検出に必要
+intents.message_content = True  # 招待リンク検出に必須（Developer PortalでもONにすること）
+
 bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 
 # Discord招待リンクを検出する正規表現
@@ -21,25 +24,35 @@ INVITE_PATTERN = re.compile(
     re.IGNORECASE
 )
 
+
+# ===== データ読み書き =====
 def load_data():
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except:
+        except Exception as e:
+            print(f"データ読み込みエラー: {e}")
             return {}
     return {}
+
+
 def save_data(data):
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         print(f"データ保存エラー: {e}")
+
+
 voice_data = load_data()
+
+
+# ===== 起動時処理 =====
 @bot.event
 async def on_ready():
     print(f"✅ Bot起動: {bot.user}")
-    
+
     # コマンドを確実に同期
     try:
         synced = await bot.tree.sync()
@@ -49,6 +62,8 @@ async def on_ready():
     except Exception as e:
         print(f"❌ 同期エラー: {e}")
 
+
+# ===== メッセージ監視（招待リンク自動削除） =====
 @bot.event
 async def on_message(message: discord.Message):
     # Bot自身のメッセージは無視
@@ -58,57 +73,67 @@ async def on_message(message: discord.Message):
     if message.guild is None:
         return
 
-    # 管理者は除外
-    if not message.author.guild_permissions.administrator:
-        if INVITE_PATTERN.search(message.content):
-            try:
-                await message.delete()
-            except discord.Forbidden:
-                print(f"❌ メッセージ削除権限がありません（{message.guild.name}）")
-                return
-            except discord.NotFound:
-                pass  # 既に削除済みなら無視
+    if INVITE_PATTERN.search(message.content):
+        # 管理者を含め、誰が貼っても削除する
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print(f"❌ メッセージ削除権限がありません（{message.guild.name}）")
+            return
+        except discord.NotFound:
+            pass  # 既に削除済みなら無視
 
-            try:
-                warning = await message.channel.send(
-                    f"⚠️ {message.author.mention} 招待リンクの投稿は禁止されています。"
-                )
-                await asyncio.sleep(5)
-                await warning.delete()
-            except discord.Forbidden:
-                print(f"❌ 警告メッセージの送信権限がありません（{message.guild.name}）")
-            except discord.NotFound:
-                pass
+        try:
+            warning = await message.channel.send(
+                f"⚠️ {message.author.mention} なに招待リンク貼ってんの？れいんさんからちゃんと許可得たか??"
+            )
+            await asyncio.sleep(5)
+            await warning.delete()
+        except discord.Forbidden:
+            print(f"❌ 警告メッセージの送信権限がありません（{message.guild.name}）")
+        except discord.NotFound:
+            pass
 
-            return  # 招待リンクメッセージはコマンド処理に回さない
+        return  # 招待リンクメッセージはコマンド処理に回さない
 
     # 通常のコマンド処理を継続させる（hybrid_command等のため必須）
     await bot.process_commands(message)
 
+
+# ===== VC参加時刻の記録 =====
 @bot.event
 async def on_voice_state_update(member, before, after):
     if member.bot:
         return
+
     guild_id = str(member.guild.id)
     user_id = str(member.id)
+
     if guild_id not in voice_data:
         voice_data[guild_id] = {}
+
     if after.channel is not None and (before.channel is None or before.channel.id != after.channel.id):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         voice_data[guild_id][user_id] = now
         save_data(voice_data)
         print(f"{member.display_name} がVCに参加 → {now}")
+
+
+# ===== /check コマンド =====
 @bot.hybrid_command(name="check", description="指定ユーザーの最終VC参加時刻を表示")
 @app_commands.describe(member="調べたいユーザー")
 async def check(ctx, member: discord.Member):
     guild_id = str(ctx.guild.id)
     user_id = str(member.id)
     data = voice_data.get(guild_id, {}).get(user_id)
+
     if data:
         await ctx.send(f"**{member.display_name}** は、最後に **{data}** に通話にいたよ")
     else:
         await ctx.send(f"**{member.display_name}** のVC参加履歴がねえぞ浮上しろ")
-# 起動
+
+
+# ===== 起動 =====
 if __name__ == "__main__":
     TOKEN = os.getenv("TOKEN")
     if not TOKEN:
