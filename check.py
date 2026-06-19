@@ -87,7 +87,7 @@ async def on_message(message: discord.Message):
             warning = await message.channel.send(
                 f"⚠️ {message.author.mention} なに招待リンク貼ってんの？れいんさんからちゃんと許可得たか??"
             )
-            await asyncio.sleep(5)
+            await asyncio.sleep(35)
             await warning.delete()
         except discord.Forbidden:
             print(f"❌ 警告メッセージの送信権限がありません（{message.guild.name}）")
